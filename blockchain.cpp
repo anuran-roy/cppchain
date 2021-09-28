@@ -169,11 +169,12 @@ int main()
     for(int i = 0; i < n-1; i++){
         cout << "\n\nMaking new block..." << endl;
         Transaction tx = Transaction("abc", "def", 0.00);
-        cout << "Hash: " << THash << endl;
+        cout << "Hash of last block: " << THash << endl;
 
         tx.getDetails();
         Node nd = Node(tx, i+2, THash);
         THash = hashNode(nd);
+        cout << "Hash of current block: " << THash << endl;
     }
 
     // tinstance.getDetails();
