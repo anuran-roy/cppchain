@@ -26,7 +26,7 @@ class Transaction
     Transaction(){
 
     }
-    Transaction(string sender, string receiver, double amt)
+    Transaction(string sender, string receiver, float amt)
     {
         senderAddress = sender;
         receiverAddress = receiver;
@@ -38,7 +38,7 @@ class Transaction
         cout << "Receiver:\t" << receiverAddress << endl;
         cout << "Amount:\t" << amount << endl;
     }
-    double getAmount(){
+    float getAmount(){
         return amount;
     }
     string getReceiver(){
@@ -50,7 +50,7 @@ class Transaction
     protected:
     string senderAddress;
     string receiverAddress;
-    double amount;
+    float amount;
 };
 
 class Node
@@ -91,15 +91,15 @@ string hashNode(Node a){
 class User
 {
     public:
-    User(string seed, double amt){
+    User(string seed, float amt){
         address = to_string(hashfunc(seed));
         balance = amt;
     }
     string getAddress(){
         return address;
     }
-    bool receiveToken(double amt){      
-        if(amt >= 0){
+    bool receiveToken(float amt){      
+        if(amt >= 0.0){
             balance += amt;
             return true;
         }
@@ -108,9 +108,9 @@ class User
             return false;
         }
     }
-    bool sendToken(double amt){
-        if(amt <= balance && amt>=0){
-            balance -= amt;
+    bool sendToken(float amt){
+        if(amt <= balance && amt>=0.0){
+            balance -= amt*1.0;
             return true;
         }
         else{
@@ -126,10 +126,10 @@ class User
     }
     private:
     string address;
-    double balance;
+    float balance;
 };
 
-User makeUser(double amt){
+User makeUser(float amt){
     string seed;
     cout << "\n\nEnter seed phrase:\n\n";
     cin >> seed;
@@ -159,7 +159,7 @@ class Contract: protected Transaction{
         
     }
     protected:
-    bool transit(User &sender, User &receiver, double amt){
+    bool transit(User &sender, User &receiver, float amt){
         if(sender.sendToken(amt)){
             receiver.receiveToken(amt);
             cout << "\n\nTransaction complete!\n\n";
@@ -199,7 +199,7 @@ class Ledger
     vector<Node> ledger;
 };
 
-Node makeNode(string usr1, string usr2, double amt, string THash, ll bnum)
+Node makeNode(string usr1, string usr2, float amt, string THash, ll bnum)
 {
     Transaction tx = Transaction(usr1, usr2, amt);
     Node nNode = Node(tx, bnum, THash);
@@ -222,7 +222,7 @@ int main()
     Contract democontract = Contract();
 
     cout << "\n\nEnter balance of sender to initialize with:";
-    double a;
+    float a;
     cin >> a;
     User u1 = makeUser(10.00);
     string sender = u1.getAddress();
