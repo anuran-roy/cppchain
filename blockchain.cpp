@@ -13,9 +13,7 @@ hash<string> hashfunc;
 typedef struct content
 {
     string lastblock;
-    // string block_hash;
     ll bno;
-    // double amount;
 } block;
 
 string getTime(){
@@ -58,7 +56,7 @@ class Transaction
 class Node
 {
     public:
-    Node(const Transaction a, ll num, string lastblock){
+    Node(const Transaction &a, ll num, string lastblock){
         nodeTransaction = a;
         current.lastblock = lastblock;
         current.bno = num;
@@ -73,6 +71,9 @@ class Node
         cout << "\n\nBlock Info:\n";
         cout << "Block number:\n" << current.bno << endl;
         cout << "Hash of last block:\n" << current.lastblock << endl;
+    }
+    Transaction getTransaction(){
+        return nodeTransaction;
     }
     private:
     Transaction nodeTransaction;
@@ -90,23 +91,35 @@ string hashNode(Node a){
 class User
 {
     public:
-    User(string seed){
-        address = hashfunc(seed);
+    User(string seed, double amt){
+        address = to_string(hashfunc(seed));
+        balance = amt;
     }
     string getAddress(){
         return address;
     }
-    void receiveToken(double amt){
-        balance += amt;
-    }
-    int sendToken(double amt){
-        if(amt <= balance){
-            balance -= amt;
-            return 0;
+    bool receiveToken(double amt){      
+        if(amt >= 0){
+            balance += amt;
+            return true;
         }
         else{
-            return -1;
+            cout << "\n\nCannot receive negative amount of tokens.\n\n";
+            return false;
         }
+    }
+    bool sendToken(double amt){
+        if(amt <= balance && amt>=0){
+            balance -= amt;
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
+    void getDetails(){
+        cout << "\nUser address:\t" << address;
+        cout << "\nBalance:\t" << balance << "\n\n";
     }
     void createTransaction(){
 
@@ -116,25 +129,46 @@ class User
     double balance;
 };
 
+User makeUser(double amt){
+    string seed;
+    cout << "\n\nEnter seed phrase:\n\n";
+    cin >> seed;
+    User newUser = User(seed, amt);
+    return newUser;
+}
 class Contract: protected Transaction{ 
 // You can customize this class by extending it, but it should always inherit Transaction.
-// Also, it MUST contain the boolean function validate(), returning a boolean value.
+// Also, it MUST contain the boolean functions validate() and transit(), returning a boolean value.
 // An atomic contract (ie., the most basic contract) involves two users and a transaction. 
     public:
     Contract(){
         num = 0;
     }
-    bool validate(const string a, const string b, Node n){
+    bool validate(User &a, User &b, Node &n){
         num++;
         if (num%2)
             return false;
-        else
-            return true;
+        else{
+            if(transit(a, b, n.getTransaction().getAmount())){
+                return true;
+            }
+            else{
+                return false;
+            }
+        }
         
     }
     protected:
-    void transit(){
-
+    bool transit(User &sender, User &receiver, double amt){
+        if(sender.sendToken(amt)){
+            receiver.receiveToken(amt);
+            cout << "\n\nTransaction complete!\n\n";
+            return true;
+        }
+        else{
+            cout << "\n\nTransaction couldn't be completed. Check the balance of sender, and the amount of tokens sent.\n\n";
+            return false;
+        }
     }
     int num;
 
@@ -147,10 +181,9 @@ class Ledger
     {
         return ledger;
     }
-    void addToLedger(Node a)
+    void addToLedger(const Node &a)
     {
         const Node b = a;
-        cout << "addToLedger() invoked...";
         ledger.push_back(b);
     }
     ll ledgerLength(){
@@ -173,10 +206,7 @@ Node makeNode(string usr1, string usr2, double amt, string THash, ll bnum)
 
     return nNode;
 }
-bool validate(User a, User b, Transaction t)
-{
 
-}
 
 int main()
 {
@@ -191,28 +221,37 @@ int main()
     string THash = hashNode(genesisBlock);
     Contract democontract = Contract();
 
-    string u1 = "abc";
-    string u2 = "def";
+    cout << "\n\nEnter balance of sender to initialize with:";
+    double a;
+    cin >> a;
+    User u1 = makeUser(10.00);
+    string sender = u1.getAddress();
+
+    cout << "\n\nEnter balance of receiver to initialize with:";
+    cin >> a;
+    User u2 = makeUser(0.00);
+    string receiver = u2.getAddress();
+
     ledgerInstance.addToLedger(genesisBlock);
 
     for(int i = 0; i < n-1; i++){
-        cout << "\n\nMaking new block..." << endl;
+        cout << "\n\n-----------------------------\n\nMaking new block..." << endl;
         // Transaction tx = Transaction("abc", "def", 0.00);
         cout << "Hash of last block: " << THash << endl;
 
         // tx.printDetails();
-        Node nd = makeNode(u1, u2, 0.00, THash, i+2);
+        cout << "Enter amount to be transacted for Transaction ID " << to_string(i+1) << ":\n";
+        cin >> a;
+        Node nd = makeNode(sender, receiver, a*1.00, THash, i+2);
         nd.printDetails();
         if(democontract.validate(u1, u2, nd)){
             THash = hashNode(nd);
-            cout << "Hash of current block: " << THash << endl;
+            cout << "Hash of current block: " << THash << "\n\n-----------------------------\n\n";
             ledgerInstance.addToLedger(nd);
         }
         else{
-            cout << "Block is not valid according to contract. Discarding block...";
-        }
-        // free(*nd);
-        
+            cout << "Block is not valid according to contract. Discarding block...\n\n-----------------------------\n\n";
+        }        
     }
     cout << "\n\n--------------------------------- Printing Ledger ---------------------------------" << endl;
     for(int i = 0; i < ledgerInstance.ledgerLength(); i++){
@@ -221,11 +260,15 @@ int main()
             ledgerInstance.printInstance(i);
         }
         else{
-            cout << "\n\nGenesis block";
+            cout << "\n\nGenesis block (Block #1)";
         }
         cout << "\n\n---------------------------------" << endl;
     }
 
-    // tinstance.getDetails();
+    cout << "Balance of sender now: " << endl;
+    u1.getDetails();
+    cout << "Balance of receiver now: " << endl;
+    u2.getDetails();
+
     return 0;
 }
