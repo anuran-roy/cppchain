@@ -1,12 +1,12 @@
 # CPPChain
 
-A simple C++ implementation of an elementary form of blockchain, built from scratch.
+A demo of an elementary form of blockchain in C++, built from scratch.
 
 ## Features
 
-- User creation
-- Proof-of-Work algorithm implementation
-- Smart Contract Capability
+-  User creation
+-  Proof-of-Work algorithm implementation
+-  Smart Contract Capability
 
 ### User Creation
 
@@ -14,10 +14,15 @@ User creation is pretty simple. You initialize a new User() object with a token 
 
 ### Proof-of-Work algorithm implementation
 
-The proof-of-work algorithm can be customized as you wish. For simplicity, I kept it as a sleep timer of 5s.
+The proof-of-work algorithm can be customized as you wish. 
+\
+For simplicity, I kept it as a sleep timer of 5s.
 
 ### Smart Contract Capability
 
-You can create simple smart contracts by extending the Contract() class, and initialize instances of your object.
+You can create simple smart contracts by extending the Contract() class, and initialize instances of the same.
 
-NOTE: You MUST keep 2 boolean functions: transit() and validate() in your Smart Contract class definition. Else the smart contract won't work.
+NOTE: You MUST keep 2 boolean functions: 
+-  ```transit()```, and 
+-  ```validate()```
+in your Smart Contract class definition. Else the smart contract won't work.
