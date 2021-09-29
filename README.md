@@ -4,9 +4,9 @@ A demo of an elementary form of blockchain in C++, built from scratch.
 
 ## Features
 
--  User creation
--  Proof-of-Work algorithm implementation
--  Smart Contract Capability
+- User creation
+- Proof-of-Work algorithm implementation
+- Smart Contract Capability
 
 ### User Creation
 
