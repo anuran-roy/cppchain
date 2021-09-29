@@ -4,6 +4,8 @@
 #include <iostream>
 #include <ctime>
 #include <bits/stdc++.h>
+#include <chrono>
+#include <thread>
 
 #define ll long long int
 using namespace std;
@@ -18,6 +20,11 @@ typedef struct content
 
 string getTime(){
     return to_string(time(nullptr));
+}
+
+void proofOfWork(int time){
+    cout << "\nSolving the proof of work puzzle worth " << time/1000 << "seconds...\n\n";
+    this_thread::sleep_for(chrono::milliseconds(time));
 }
 
 class Transaction
@@ -88,6 +95,71 @@ string hashNode(Node a){
     return to_string(hashfunc(t));
 
 }
+
+bool NodeEquals(Node a, Node b){
+        bool resp = false;
+        string t1_sender = a.getTransaction().getSender();
+        string t1_receiver = a.getTransaction().getReceiver();
+        float t1_amount = a.getTransaction().getAmount();
+
+        string t2_sender = b.getTransaction().getSender();
+        string t2_receiver = b.getTransaction().getReceiver();
+        float t2_amount = b.getTransaction().getAmount();
+
+        ll t1_bno = a.getDetails().bno;
+        string t1_lastblock = a.getDetails().lastblock;
+
+        ll t2_bno = b.getDetails().bno;
+        string t2_lastblock = b.getDetails().lastblock;
+
+        if(t1_sender == t2_sender)
+        {
+            if(t1_receiver == t2_receiver)
+            {
+                if(t1_amount == t2_amount)
+                {
+                    if(t1_bno == t2_bno)
+                    {
+                        if(t1_lastblock == t2_lastblock)
+                        {
+                            resp = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return resp;
+    }
+class Ledger
+{
+    public:
+    vector<Node> getLedger()
+    {
+        return ledger;
+    }
+    void setLedger(vector<Node> &a)
+    {
+        ledger.assign(a.begin(), a.end());
+    }
+    void addToLedger(const Node &a)
+    {
+        const Node b = a;
+        ledger.push_back(b);
+    }
+    ll ledgerLength(){
+        return ledger.size();
+    }
+    void printInstance(int i){
+        ledger[i].printDetails();
+    }
+    Node getInstance(int i){
+        return ledger[i];
+    }
+    private:
+    vector<Node> ledger;
+};
+
 class User
 {
     public:
@@ -117,16 +189,24 @@ class User
             return false;
         }
     }
+    void setUserLedger(const vector<Node> &a)
+    {
+        ledgerCopy.assign(a.begin(), a.end());
+    }
     void getDetails(){
         cout << "\nUser address:\t" << address;
         cout << "\nBalance:\t" << balance << "\n\n";
+        cout << "\nLedger details for user:" << endl;
+        for(int i=0; i<ledgerCopy.size(); i++)
+            ledgerCopy[i].printDetails();
     }
-    void createTransaction(){
-
+    vector<Node> getUserLedger(){
+        return ledgerCopy;
     }
     private:
     string address;
     float balance;
+    vector<Node> ledgerCopy;
 };
 
 User makeUser(float amt){
@@ -135,6 +215,31 @@ User makeUser(float amt){
     cin >> seed;
     User newUser = User(seed, amt);
     return newUser;
+}
+
+bool compareLedgers(User a, User b){
+    // cout << "\ncompareLedgers() invoked!\n";
+    vector<Node> l1;
+    // cout << "Going to invoke assign() for l1\n\n";
+    l1 = a.getUserLedger();
+    // l1.assign(a.getUserLedger().begin(), a.getUserLedger().end());
+    vector<Node> l2;
+    // cout << "Going to invoke assign() for l2\n\n";
+    l2 = b.getUserLedger();
+    // l2.assign(b.getUserLedger().begin(), b.getUserLedger().end());
+
+    if (l1.size() == l2.size()){
+        for(int i = 0; i < l1.size(); i++){
+            if (NodeEquals(l1[i],l2[i])){
+                cout << "";
+            }
+            else{
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
 }
 class Contract: protected Transaction{ 
 // You can customize this class by extending it, but it should always inherit Transaction.
@@ -146,17 +251,17 @@ class Contract: protected Transaction{
     }
     bool validate(User &a, User &b, Node &n){
         num++;
-        if (num%2)
-            return false;
-        else{
-            if(transit(a, b, n.getTransaction().getAmount())){
-                return true;
-            }
-            else{
-                return false;
-            }
-        }
-        
+        // if (num%2)
+        //     return false;
+        // else{
+        //     if(transit(a, b, n.getTransaction().getAmount())){
+        //         return true;
+        //     }
+        //     else{
+        //         return false;
+        //     }
+        // }
+        return true;
     }
     protected:
     bool transit(User &sender, User &receiver, float amt){
@@ -174,30 +279,6 @@ class Contract: protected Transaction{
 
 };
 
-class Ledger
-{
-    public:
-    vector<Node> getLedger()
-    {
-        return ledger;
-    }
-    void addToLedger(const Node &a)
-    {
-        const Node b = a;
-        ledger.push_back(b);
-    }
-    ll ledgerLength(){
-        return ledger.size();
-    }
-    void printInstance(int i){
-        ledger[i].printDetails();
-    }
-    Node getInstance(int i){
-        return ledger[i];
-    }
-    private:
-    vector<Node> ledger;
-};
 
 Node makeNode(string usr1, string usr2, float amt, string THash, ll bnum)
 {
@@ -207,6 +288,9 @@ Node makeNode(string usr1, string usr2, float amt, string THash, ll bnum)
     return nNode;
 }
 
+void propagate(){
+    cout << "";
+}
 
 int main()
 {
@@ -224,12 +308,12 @@ int main()
     cout << "\n\nEnter balance of sender to initialize with:";
     float a;
     cin >> a;
-    User u1 = makeUser(10.00);
+    User u1 = makeUser(a);
     string sender = u1.getAddress();
 
     cout << "\n\nEnter balance of receiver to initialize with:";
     cin >> a;
-    User u2 = makeUser(0.00);
+    User u2 = makeUser(a);
     string receiver = u2.getAddress();
 
     ledgerInstance.addToLedger(genesisBlock);
@@ -251,7 +335,11 @@ int main()
         }
         else{
             cout << "Block is not valid according to contract. Discarding block...\n\n-----------------------------\n\n";
-        }        
+        }
+        proofOfWork(5000);
+
+        u1.setUserLedger(ledgerInstance.getLedger());
+        u2.setUserLedger(ledgerInstance.getLedger());       
     }
     cout << "\n\n--------------------------------- Printing Ledger ---------------------------------" << endl;
     for(int i = 0; i < ledgerInstance.ledgerLength(); i++){
@@ -262,13 +350,18 @@ int main()
         else{
             cout << "\n\nGenesis block (Block #1)";
         }
-        cout << "\n\n---------------------------------" << endl;
+        cout << "\n\n---------------------------------" << endl;     
     }
 
-    cout << "Balance of sender now: " << endl;
+    cout << "\n========================================\nBalance of sender now: " << endl;
     u1.getDetails();
-    cout << "Balance of receiver now: " << endl;
+    
+    cout << "\n========================================\nBalance of receiver now: " << endl;
     u2.getDetails();
+
+    cout << "\n\nAre the ledgers same?\n\n";
+    cout << compareLedgers(u1, u2) << endl;
+
 
     return 0;
 }
