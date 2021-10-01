@@ -28,7 +28,7 @@ For simplicity, I kept it as a sleep timer of random duration within the range 1
 
 ### Smart Contract Capability
 
-You can create simple smart contracts by extending the Contract() class, and initialize instances of the same.
+You can create simple smart contracts by extending the ```Contract()``` class, and initialize instances of the same.
 
 NOTE: You MUST keep 2 boolean functions: 
 -  ```transit()```, and 
