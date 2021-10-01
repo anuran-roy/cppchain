@@ -31,6 +31,17 @@ void proofOfWork(int time){ // a simple proof-of-work algorithm
     this_thread::sleep_for(chrono::milliseconds(time));
 }
 
+int digits(ll t){
+    int i = 0;
+
+    while(t>0){
+        ++i;
+        t = (int)t/10;
+    }
+
+    return i;
+}
+
 ll applyLock(){
     srand(0);
 
@@ -212,6 +223,10 @@ class User // A user in the blockchain network
         for(int i=0; i<ledgerCopy.size(); i++)
             ledgerCopy[i].printDetails();
     }
+    void printLedger(){
+        for(int i=0; i<ledgerCopy.size(); i++)
+            ledgerCopy[i].printDetails();
+    }
     vector<Node> getUserLedger(){
         return ledgerCopy;
     }
@@ -303,6 +318,109 @@ bool compareLedgers(User a, User b){
     }
     return false;
 }
+
+class Miner{
+    public:
+    Miner(string seed){
+        timejoined = time(0);
+        rate = 10;
+        balance = 0.0;
+        address = to_string(hashfunc(seed));
+    }
+    string getAddress(){
+        return address;
+    }
+    bool receiveToken(float amt){      
+        if(amt >= 0.0){
+            balance += amt;
+            return true;
+        }
+        else{
+            cout << "\n\nCannot receive negative amount of tokens.\n\n";
+            return false;
+        }
+    }
+    bool sendToken(float amt){
+        if(amt <= balance && amt>=0.0){
+            balance -= amt*1.0;
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
+    void rateUpdate(){
+        rate *= exp(1.5*(timejoined - time(0))/pow(10, digits(time(0)+1)));
+    }
+    void reward(){
+        if(balance == 0.0){
+            balance += 1.0;
+        }
+        else{
+            balance += balance*rate/10;
+        }
+    }
+    void setMinerLedger(const vector<Node> &a)
+    {
+        ledgerCopy.assign(a.begin(), a.end());
+    }
+    void getDetails(){
+        cout << "\nMiner address:\t" << address;
+        cout << "\nBalance:\t" << balance << "\n\n";
+        cout << "\nLedger details for user:" << endl;
+        for(int i=0; i<ledgerCopy.size(); i++)
+            ledgerCopy[i].printDetails();
+    }
+    void printLedger(){
+        for(int i=0; i<ledgerCopy.size(); i++)
+            ledgerCopy[i].printDetails();
+    }
+    vector<Node> getMinerLedger(){
+        return ledgerCopy;
+    }
+
+    private:
+    ll timejoined;
+    string address;
+    float rate;
+    float balance;
+    vector<Node> ledgerCopy;
+    ll lastTransactionTime;
+
+};
+class MinerList{
+    public:
+    vector<Miner> getMinersList(){
+        return miners;
+    }
+    void addNewMiner(Miner &a){
+        miners.push_back(a);
+    }
+    Miner getMiner(string hash){
+        for(int i=0; i<miners.size(); i++){
+            if(miners[i].getAddress() == hash){
+                return miners[i];
+            }
+        }
+
+        return Miner("");
+    }
+    Miner getMiner(int i){
+        if(i < miners.size() && i > 0){
+            return miners[i];
+        }
+        else{
+            return Miner("");
+        }
+    }
+    ll size(){
+        return miners.size();
+    }
+
+
+    private:
+    vector<Miner> miners;
+};
 class Contract: protected Transaction{ 
 // You can customize this class by extending it, but it should always inherit Transaction.
 // Also, it MUST contain the boolean functions validate() and must call bool transit().
@@ -393,7 +511,7 @@ User voting(UserList &a)
     return a.getUser(mostCommon);
 }
 
-int main()
+int main2()
 {
     Ledger ledgerInstance = Ledger();
     UserList userslist = UserList();
@@ -480,27 +598,44 @@ int main()
 
     return 0;
 }
-// int main2(){
-//     UserList userslist = UserList();
+int main1(){
+    UserList userslist = UserList();
 
-//     while(true){
-//         cout << "Menu: \n1. Make a new user\n2. Make a new transaction\n3. View ledger\n\nEnter your choice:\t";
-//         int ch;
-//         cin >> ch;
+    while(true){
+        cout << "Menu: \n1. Make a new user\n2. Make a new transaction\n3. View ledger\n\nEnter your choice:\t";
+        int ch;
+        cin >> ch;
 
-//         switch(ch){
-//             case 1:
-//                 cout << "\n\nEnter balance of sender to initialize with:";
-//                 float a;
-//                 cin >> a;
-//                 User u1 = makeUser(a);
-//                 userslist.addNewUser(u1);
-//                 break;
+        switch(ch){
+            case 1:{
+                cout << "\n\nEnter balance of sender to initialize with:";
+                float a;
+                cin >> a;
+                User u = makeUser(a);
 
-//             case 2:
-//                 cout << "";
-//                 break;
-//         }
-//     }
-//     return 0;
-// }
+                if(userslist.size() == 0){
+
+                }
+                userslist.addNewUser(u);
+                break;
+            }
+            case 2:{
+                cout << "";
+                break;
+            }
+            case 3:{
+                userslist.getUser(0).printLedger();
+                break;
+            }
+            default:{
+                cout << "\nInvalid choice. Try again.\n";
+                break;
+            }
+        }
+    }
+    return 0;
+}
+int main(){
+    int a = main2();
+    int b = main1();
+}
