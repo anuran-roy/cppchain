@@ -1,3 +1,7 @@
+/*
+Made by Anuran Roy (https://github.com/anuran-roy)
+*/
+
 #include <string>
 #include <functional>
 #include <vector>
@@ -12,22 +16,28 @@ using namespace std;
 
 hash<string> hashfunc;
 
-typedef struct content
+typedef struct content // The metadata of a block
 {
     string lastblock;
     ll bno;
 } block;
 
-string getTime(){
+string getTime(){ // method to get the current time
     return to_string(time(nullptr));
 }
 
-void proofOfWork(int time){
+void proofOfWork(int time){ // a simple proof-of-work algorithm
     cout << "\nSolving the proof of work puzzle worth " << time/1000 << "seconds...\n\n";
     this_thread::sleep_for(chrono::milliseconds(time));
 }
 
-class Transaction
+ll applyLock(){
+    srand(0);
+
+    return rand()%20+10;
+}
+
+class Transaction // The smallest unit of a blockchain - The Transaction
 {
     public:
     Transaction(){
@@ -60,7 +70,7 @@ class Transaction
     float amount;
 };
 
-class Node
+class Node // The encapsulation of a Transaction
 {
     public:
     Node(const Transaction &a, ll num, string lastblock){
@@ -131,7 +141,7 @@ bool NodeEquals(Node a, Node b){
 
         return resp;
     }
-class Ledger
+class Ledger // The sequenced chain of blocks
 {
     public:
     vector<Node> getLedger()
@@ -160,12 +170,14 @@ class Ledger
     vector<Node> ledger;
 };
 
-class User
+class User // A user in the blockchain network
 {
     public:
     User(string seed, float amt){
         address = to_string(hashfunc(seed));
         balance = amt;
+        lastTransactionTime = time(0);
+        lockTime = 0;
     }
     string getAddress(){
         return address;
@@ -203,10 +215,60 @@ class User
     vector<Node> getUserLedger(){
         return ledgerCopy;
     }
+    void setLock(ll t){
+        lockTime = t;
+    }
+    bool PoET(ll time){ // PoET = Proof of Elapsed Time
+        if( time > (lockTime + lastTransactionTime)){
+            lastTransactionTime = time;
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
     private:
     string address;
     float balance;
     vector<Node> ledgerCopy;
+    ll lastTransactionTime;
+    ll lockTime;
+};
+
+class UserList
+{
+
+    public:
+    vector<User> getUsersList(){
+        return users;
+    }
+    void addNewUser(User &a){
+        users.push_back(a);
+    }
+    User getUser(string hash){
+        for(int i=0; i<users.size(); i++){
+            if(users[i].getAddress() == hash){
+                return users[i];
+            }
+        }
+
+        return User("", 0.0);
+    }
+    User getUser(int i){
+        if(i < users.size() && i > 0){
+            return users[i];
+        }
+        else{
+            return User("", 0.0);
+        }
+    }
+    ll size(){
+        return users.size();
+    }
+
+
+    private:
+    vector<User> users;
 };
 
 User makeUser(float amt){
@@ -243,14 +305,14 @@ bool compareLedgers(User a, User b){
 }
 class Contract: protected Transaction{ 
 // You can customize this class by extending it, but it should always inherit Transaction.
-// Also, it MUST contain the boolean functions validate() and transit(), returning a boolean value.
+// Also, it MUST contain the boolean functions validate() and must call bool transit().
 // An atomic contract (ie., the most basic contract) involves two users and a transaction. 
     public:
     Contract(){
-        num = 0;
+        // num = 0;
     }
     bool validate(User &a, User &b, Node &n){
-        num++;
+        // num++;
         // if (num%2)
         //     return false;
         // else{
@@ -261,21 +323,41 @@ class Contract: protected Transaction{
         //         return false;
         //     }
         // }
-        return true;
-    }
-    protected:
-    bool transit(User &sender, User &receiver, float amt){
-        if(sender.sendToken(amt)){
-            receiver.receiveToken(amt);
-            cout << "\n\nTransaction complete!\n\n";
+        if(transit(a, b, n.getTransaction().getAmount())){
             return true;
         }
         else{
-            cout << "\n\nTransaction couldn't be completed. Check the balance of sender, and the amount of tokens sent.\n\n";
             return false;
         }
     }
-    int num;
+    protected:
+    bool transit(User &sender, User &receiver, float amt){
+        srand(time(0));
+
+        ll locktime = applyLock();
+        ll timeNow = time(0);
+        if(sender.PoET(timeNow) && receiver.PoET(timeNow))
+        {
+            if(sender.sendToken(amt)){
+                receiver.receiveToken(amt);
+
+                sender.setLock(locktime);
+                receiver.setLock(locktime);
+                cout << "\n\nTransaction complete!\n\n";
+                cout << "A lock time of " << locktime << " seconds has been set on the users.\n\n";
+                return true;
+            }
+            else{
+                cout << "\n\nTransaction couldn't be completed. Check the balance of sender, and the amount of tokens sent.\n\n";
+                return false;
+            }
+        }
+        else{
+            cout << "\nThe sender and/or the receiver isn't ready for the transaction to take place.\n";
+            return false;
+        }
+    }
+    // int num;
 
 };
 
@@ -288,13 +370,33 @@ Node makeNode(string usr1, string usr2, float amt, string THash, ll bnum)
     return nNode;
 }
 
-void propagate(){
-    cout << "";
+User voting(UserList &a)
+{
+    // User c1 = a.getUser(0);
+    // User c2 = a.getUser(1);
+    int mostCommon;
+    ll lsize = a.size();
+    ll maxcount = 0;
+    ll count = 0;
+    for(int i = 0; i < lsize; i++){
+        for(int j = 0; j < lsize; j++){
+            if(compareLedgers(a.getUser(i), a.getUser(j))){
+                count++;
+                if(count > maxcount){
+                    maxcount = count;
+                    mostCommon = i;
+                }
+            }
+        }
+    }
+
+    return a.getUser(mostCommon);
 }
 
 int main()
 {
     Ledger ledgerInstance = Ledger();
+    UserList userslist = UserList();
     
     cout << "\nEnter number of mock transactions to generate:\n";
     int n;
@@ -309,12 +411,20 @@ int main()
     float a;
     cin >> a;
     User u1 = makeUser(a);
+    userslist.addNewUser(u1);
     string sender = u1.getAddress();
 
     cout << "\n\nEnter balance of receiver to initialize with:";
     cin >> a;
     User u2 = makeUser(a);
+    userslist.addNewUser(u2);
     string receiver = u2.getAddress();
+
+    cout << "\n\nEnter amount to initialize the third user with:";
+    cin >> a;
+    User u3 = makeUser(a);
+    userslist.addNewUser(u3);
+    string observer = u3.getAddress();
 
     ledgerInstance.addToLedger(genesisBlock);
 
@@ -336,10 +446,12 @@ int main()
         else{
             cout << "Block is not valid according to contract. Discarding block...\n\n-----------------------------\n\n";
         }
-        proofOfWork(5000);
+        // proofOfWork(5000);
 
         u1.setUserLedger(ledgerInstance.getLedger());
-        u2.setUserLedger(ledgerInstance.getLedger());       
+        u2.setUserLedger(ledgerInstance.getLedger());
+
+          
     }
     cout << "\n\n--------------------------------- Printing Ledger ---------------------------------" << endl;
     for(int i = 0; i < ledgerInstance.ledgerLength(); i++){
@@ -350,9 +462,11 @@ int main()
         else{
             cout << "\n\nGenesis block (Block #1)";
         }
-        cout << "\n\n---------------------------------" << endl;     
-    }
+        cout << "\n\n---------------------------------" << endl;
 
+         
+    }
+    
     cout << "\n========================================\nBalance of sender now: " << endl;
     u1.getDetails();
     
@@ -363,5 +477,30 @@ int main()
     cout << compareLedgers(u1, u2) << endl;
 
 
+
     return 0;
 }
+// int main2(){
+//     UserList userslist = UserList();
+
+//     while(true){
+//         cout << "Menu: \n1. Make a new user\n2. Make a new transaction\n3. View ledger\n\nEnter your choice:\t";
+//         int ch;
+//         cin >> ch;
+
+//         switch(ch){
+//             case 1:
+//                 cout << "\n\nEnter balance of sender to initialize with:";
+//                 float a;
+//                 cin >> a;
+//                 User u1 = makeUser(a);
+//                 userslist.addNewUser(u1);
+//                 break;
+
+//             case 2:
+//                 cout << "";
+//                 break;
+//         }
+//     }
+//     return 0;
+// }
