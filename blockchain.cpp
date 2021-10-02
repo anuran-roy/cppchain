@@ -45,7 +45,7 @@ int digits(ll t){
 ll applyLock(){
     srand(0);
 
-    return rand()%20+10;
+    return rand()%20+240;
 }
 
 class Transaction // The smallest unit of a blockchain - The Transaction
@@ -233,6 +233,9 @@ class User // A user in the blockchain network
     void setLock(ll t){
         lockTime = t;
     }
+    void addToLedger(Node n){
+        ledgerCopy.push_back(n);
+    }
     bool PoET(ll time){ // PoET = Proof of Elapsed Time
         if( time > (lockTime + lastTransactionTime)){
             lastTransactionTime = time;
@@ -260,14 +263,17 @@ class UserList
     void addNewUser(User &a){
         users.push_back(a);
     }
-    User getUser(string hash){
+    User* getUser(string hash){
         for(int i=0; i<users.size(); i++){
             if(users[i].getAddress() == hash){
-                return users[i];
+                User *req = &users[i];
+                return req;
             }
         }
-
-        return User("", 0.0);
+        cout << "\n\nUser doesn't exist.\n";
+        User dummy = User("", 0.0);
+        User *dummyp = &dummy;
+        return dummyp;
     }
     User getUser(int i){
         if(i < users.size() && i > 0){
@@ -275,6 +281,18 @@ class UserList
         }
         else{
             return User("", 0.0);
+        }
+    }
+    User* getUser(ll i){
+        if(i < users.size() && i > 0){
+            User *req = &users[i];
+            return req;
+        }
+        else{
+            cout << "\n\nUser doesn't exist.\n";
+            User dummy = User("", 0.0);
+            User *dummyp = &dummy;
+            return dummyp;
         }
     }
     ll size(){
@@ -448,6 +466,25 @@ class Contract: protected Transaction{
             return false;
         }
     }
+    bool validate(User *a, User *b, Node &n){
+        // num++;
+        // if (num%2)
+        //     return false;
+        // else{
+        //     if(transit(a, b, n.getTransaction().getAmount())){
+        //         return true;
+        //     }
+        //     else{
+        //         return false;
+        //     }
+        // }
+        if(transit(*a, *b, n.getTransaction().getAmount())){
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
     protected:
     bool transit(User &sender, User &receiver, float amt){
         srand(time(0));
@@ -461,6 +498,32 @@ class Contract: protected Transaction{
 
                 sender.setLock(locktime);
                 receiver.setLock(locktime);
+                cout << "\n\nTransaction complete!\n\n";
+                cout << "A lock time of " << locktime << " seconds has been set on the users.\n\n";
+                return true;
+            }
+            else{
+                cout << "\n\nTransaction couldn't be completed. Check the balance of sender, and the amount of tokens sent.\n\n";
+                return false;
+            }
+        }
+        else{
+            cout << "\nThe sender and/or the receiver isn't ready for the transaction to take place.\n";
+            return false;
+        }
+    }
+    bool transit(User *sender, User *receiver, float amt){
+        srand(time(0));
+
+        ll locktime = applyLock();
+        ll timeNow = time(0);
+        if(sender->PoET(timeNow) && receiver->PoET(timeNow))
+        {
+            if(sender->sendToken(amt)){
+                receiver->receiveToken(amt);
+
+                sender->setLock(locktime);
+                receiver->setLock(locktime);
                 cout << "\n\nTransaction complete!\n\n";
                 cout << "A lock time of " << locktime << " seconds has been set on the users.\n\n";
                 return true;
@@ -500,7 +563,7 @@ User voting(UserList &a)
         for(int j = 0; j < lsize; j++){
             if(compareLedgers(a.getUser(i), a.getUser(j))){
                 count++;
-                if(count > maxcount){
+                if(count > maxcount || lsize == 2){
                     maxcount = count;
                     mostCommon = i;
                 }
@@ -509,6 +572,14 @@ User voting(UserList &a)
     }
 
     return a.getUser(mostCommon);
+}
+
+void broadcast(UserList *usrl, const Node &nd){
+    ll length = usrl->size();
+    for(ll i=0; i<length; i++){
+        cout << "Calling user " << i+1 << endl;
+        (usrl->getUser(i))->addToLedger(nd);
+    }
 }
 
 int main2()
@@ -598,37 +669,85 @@ int main2()
 
     return 0;
 }
+
 int main1(){
     UserList userslist = UserList();
+    string THash;
+    ll count = 0;
 
     while(true){
-        cout << "Menu: \n1. Make a new user\n2. Make a new transaction\n3. View ledger\n\nEnter your choice:\t";
+        cout << "Menu: \n1. Make a new user\n2. Make a new User-to-User transaction\n3. View ledger\n4. Make a new miner\n5. Mine new tokens\n6. Check your reward rate\n\nEnter your choice:\t";
         int ch;
         cin >> ch;
-
+        
         switch(ch){
             case 1:{
                 cout << "\n\nEnter balance of sender to initialize with:";
                 float a;
                 cin >> a;
                 User u = makeUser(a);
-
+                
                 if(userslist.size() == 0){
+                    Node genesisBlock = Node(Transaction("__init__","__init__",0.00), 1, to_string(hashfunc("0")));
+                    THash = hashNode(genesisBlock);
+                    Ledger l = Ledger();
 
+                    l.addToLedger(genesisBlock);
+                    u.setUserLedger(l.getLedger());
+                    ++count;
                 }
+                else{
+                    User correctUser = voting(userslist);
+                    u.setUserLedger(correctUser.getUserLedger());
+                }
+                cout << "\nUser address:\n";
+                cout << u.getAddress() << endl;
+                cout << "\nPrinting ledger:" << endl;
+                u.printLedger();
                 userslist.addNewUser(u);
+                cout << "UserList size = " << userslist.size() << endl;
                 break;
             }
             case 2:{
                 cout << "";
+
+                if(userslist.size() == 0){
+                    cout << "";
+                }else{
+                    cout << "\nEnter user hash to send money from:\t";
+                    string snd;
+                    cin >> snd;
+                    
+                    cout << "\nEnter user hash to send money to:\t";
+                    string rcv;
+                    cin >> rcv;
+                    
+                    cout << "\nEnter amount to send:\n";
+                    float amt;
+                    cin >> amt;
+
+                    Contract demoContract = Contract();
+                    Node nd = makeNode(snd, rcv, amt, THash, count); 
+                    if(demoContract.validate(userslist.getUser(snd), userslist.getUser(rcv), nd)){
+                        THash = hashNode(nd);
+                        broadcast(&userslist, nd);
+                    }
+                }
                 break;
             }
             case 3:{
-                userslist.getUser(0).printLedger();
+                cout << "\nPrinting Ledger:\n";
+                voting(userslist).printLedger();
                 break;
             }
+            case 4:{
+                cout << "Enter number of miners to initialize:\n";
+                int n;
+                cin >> n;
+                
+            }
             default:{
-                cout << "\nInvalid choice. Try again.\n";
+                cout << "\nInvalid choice. Try again." << endl;
                 break;
             }
         }
@@ -636,6 +755,6 @@ int main1(){
     return 0;
 }
 int main(){
-    int a = main2();
+    // int a = main2();
     int b = main1();
 }
